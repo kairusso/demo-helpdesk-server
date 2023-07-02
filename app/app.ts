@@ -148,8 +148,7 @@ class App {
         /// PUBLIC GETS ///////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////
         router.get('/:actionA?', async (req: any, res: any) => { 
-			//res.status(501).send({ error: 'Route does not exist' });
-			res.send('<html><body><h1>Hello World</h1></body></html>');
+			res.status(501).send({ error: 'Route does not exist' });
         });
 
         // Anchor all the Calls
