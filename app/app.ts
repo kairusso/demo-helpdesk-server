@@ -24,9 +24,6 @@ class App {
 	/// Express instance 
 	public express = express();
 
-	/// Mongo DB Instance
-	private db: Db | null | void = null;
-
 
 	// MARK: CLASS INITIALIZATION
 
@@ -44,9 +41,6 @@ class App {
 
 		// Mount API Routes
         this.mountRoutes();
-
-		// Connect to DB
-        this.connect();
 	}
 
 
@@ -55,33 +49,15 @@ class App {
 	/** 
      * Connect to our Mongo DB
      */
-    public async connect() {
-		// Sanity Check
-		if (this.db) { return; }
-
+    public async connectToDB(): Promise<Db | null> {
 		// Connect to our Database
 		let client = await MongoClient.connect(process.env.MONGO_ACCESS_URL as any);
-		if (!client) { throw Error("Error | Setup | Could not connect to our Database"); }
+		if (!client) { return null; }
 
 		// Set up our MongoDB Global
-		this.db = client.db("ZealthyHelpdesk");
-
-        // Index DB
-        this.indexCollections();
-
-        // Log Connection Success
-        console.log("Collection Driver Connected to db");
+		let db = client.db("ZealthyHelpdesk");
+		return db;
     }
-
-	/**
-	 * Ensure Indexes on our MongoDB
-	 */
-    private async indexCollections() {
-        if (!this.db) { return; }
-
-        // Ensure Call Log Indexes
-        await this.db.collection(Collections.Tickets).createIndex({ 'status' : 1, 'createdAt' : 1 });
-	}
 
 
 	// MARK: SERVER INITIALIZATION
@@ -96,11 +72,9 @@ class App {
         /// PUBLIC POSTS ///////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////
         router.post('/:actionA?', async (req: any, res: any) => {
-			// Needed to add this to make serverless on Vercel work
-			await this.connect();
-
-			// DB Sanity Check
-			if (!this.db) {
+			// Connect to DB
+			let db = await this.connectToDB();
+			if (!db) {
 				res.status(500).send({ error: 'DB not connected' });
 				return;
 			}
@@ -112,7 +86,7 @@ class App {
 
 				// Attempt to Submit Ticket
                 case "submitTicket": {
-                    let submissionResponse = await submitTicket(this.db, req.body);
+                    let submissionResponse = await submitTicket(db, req.body);
                     res.json({
 						'result' : submissionResponse
 					});
@@ -123,14 +97,14 @@ class App {
 
 				// Load Tickets
                 case "loadTickets": {
-                    let ticketResponse = await loadTickets(this.db, req.body);
+                    let ticketResponse = await loadTickets(db, req.body);
                     res.json(ticketResponse);
                     break;
                 }
 
 				// Update Ticket
                 case "submitTicketResponse": {
-                    let submissionResponse = await submitTicketResponse(this.db, req.body);
+                    let submissionResponse = await submitTicketResponse(db, req.body);
                     res.json({
 						'result' : submissionResponse
 					});
