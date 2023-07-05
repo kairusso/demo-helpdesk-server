@@ -51,7 +51,7 @@ class App {
             console.log('Connecting to DB');
             // Connect to our Database
             let success = true;
-            yield mongoose_1.default.connect(process.env.MONGO_ACCESS_URL + '/ZealthyHelpdesk')
+            yield mongoose_1.default.connect(process.env.MONGO_ACCESS_URL)
                 .then(() => console.log('Connected!'))
                 .catch((err) => { success = false; console.log(err); });
             return success;

@@ -51,7 +51,7 @@ class App {
 
 		// Connect to our Database
 		let success = true;
-		await mongoose.connect(process.env.MONGO_ACCESS_URL as any + '/ZealthyHelpdesk')
+		await mongoose.connect(process.env.MONGO_ACCESS_URL as any)
 			.then(() => console.log('Connected!'))
 			.catch((err) => { success = false; console.log(err) });
 
