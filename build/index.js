@@ -10,3 +10,4 @@ const port = process.env.PORT || 3000;
 app_1.default.listen(port, () => {
     return console.log(`server is listening on ${port}`);
 });
+module.exports = app_1.default;

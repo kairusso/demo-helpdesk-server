@@ -10,27 +10,11 @@ export interface TicketSubmission {
     description:    string,
 }
 
-// Stripped Down Ticket for Ticket Management
-export interface ClientTicket extends TicketSubmission {
-    _id:            ObjectId,
-
-    createdAt:		Date,
-	status:			TicketStatus,	
-}
-
-/// Ticket Loading Filter
-export interface TicketLoadingFilter {
-    loadNew:                boolean,
-    loadInProgress:         boolean,
-    loadResolved:           boolean,
-    loadResolvedLimit:      number | null,
-}
-
 /// Ticket Loading Response
 export interface TicketLoadingResponse {
-    newTickets:             ClientTicket[],
-    inProgressTickets:      ClientTicket[],
-    resolvedTickets:        ClientTicket[],
+    newTickets:             Ticket[],
+    inProgressTickets:      Ticket[],
+    resolvedTickets:        Ticket[],
 }
 
 /// Ticket Update
@@ -59,8 +43,10 @@ export interface Ticket extends TicketSubmission {
  * Functions as a snapshot in the Status History
  */
 export interface StatusUpdate {
-    timestamp:      string,
+    timestamp:      Date,
     status:         TicketStatus,
     detail:    		string,
 }
+
+
 

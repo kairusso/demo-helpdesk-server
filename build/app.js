@@ -14,12 +14,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // Import 3rd Party Libraries
 const express_1 = __importDefault(require("express"));
-const mongodb_1 = require("mongodb");
+const mongoose_1 = __importDefault(require("mongoose"));
 const mongoSanitize = require('express-mongo-sanitize');
 const cors = require('cors');
 require('dotenv').config();
-// Import General Functions, Enums, and Interfaces 
-const enums_1 = require("./enums");
 // Import Specific Functions, Enums, and Interfaces 
 const ticket_1 = require("./classes/ticket/ticket");
 /**
@@ -35,57 +33,28 @@ class App {
         // MARK: GLOBALS
         /// Express instance 
         this.express = (0, express_1.default)();
-        /// Mongo DB Instance
-        this.db = null;
         // Setup Express
         this.express.use(express_1.default.json());
         this.express.use(express_1.default.urlencoded({ extended: false }));
         this.express.use(cors());
-        // Attempt at getting around CORS issues
-        // this.express.use(express.static(path.resolve('client')));
-        // this.express.get("*", (req, res) => {
-        // 	res.sendFile(path.resolve('client', 'index.html'),function (err) {
-        // 		if(err) {
-        // 			res.status(500).send(err)
-        // 		}
-        // 	});
-        // })
         // Strip Injection Keys from Requests
         this.express.use(mongoSanitize());
         // Mount API Routes
         this.mountRoutes();
-        // Connect to DB
-        this.connect();
     }
     // MARK: DATABASE INITIALIZATION
     /**
      * Connect to our Mongo DB
      */
-    connect() {
+    connectToDB() {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log('Connecting to DB');
             // Connect to our Database
-            let client = yield mongodb_1.MongoClient.connect(process.env.MONGO_ACCESS_URL);
-            if (!client) {
-                throw Error("Error | Setup | Could not connect to our Database");
-            }
-            // Set up our MongoDB Global
-            this.db = client.db("ZealthyHelpdesk");
-            // Index DB
-            this.indexCollections();
-            // Log Connection Success
-            console.log("Collection Driver Connected to db");
-        });
-    }
-    /**
-     * Ensure Indexes on our MongoDB
-     */
-    indexCollections() {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this.db) {
-                return;
-            }
-            // Ensure Call Log Indexes
-            yield this.db.collection(enums_1.Collections.Tickets).createIndex({ 'status': 1, 'createdAt': 1 });
+            let success = true;
+            yield mongoose_1.default.connect(process.env.MONGO_ACCESS_URL + '/ZealthyHelpdesk')
+                .then(() => console.log('Connected!'))
+                .catch((err) => { success = false; console.log(err); });
+            return success;
         });
     }
     // MARK: SERVER INITIALIZATION
@@ -98,8 +67,9 @@ class App {
         /// PUBLIC POSTS ///////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////
         router.post('/:actionA?', (req, res) => __awaiter(this, void 0, void 0, function* () {
-            // DB Sanity Check
-            if (!this.db) {
+            // Connect to DB
+            let connectedToDB = yield this.connectToDB();
+            if (!connectedToDB) {
                 res.status(500).send({ error: 'DB not connected' });
                 return;
             }
@@ -108,22 +78,16 @@ class App {
                 // CREATING TICKETS
                 // Attempt to Submit Ticket
                 case "submitTicket": {
-                    let submissionResponse = yield (0, ticket_1.submitTicket)(this.db, req.body);
+                    let submissionResponse = yield (0, ticket_1.submitTicket)(req.body);
                     res.json({
                         'result': submissionResponse
                     });
                     break;
                 }
                 // MANAGING TICKETS
-                // Load Tickets
-                case "loadTickets": {
-                    let ticketResponse = yield (0, ticket_1.loadTickets)(this.db, req.body);
-                    res.json(ticketResponse);
-                    break;
-                }
                 // Update Ticket
                 case "submitTicketResponse": {
-                    let submissionResponse = yield (0, ticket_1.submitTicketResponse)(this.db, req.body);
+                    let submissionResponse = yield (0, ticket_1.submitTicketResponse)(req.body);
                     res.json({
                         'result': submissionResponse
                     });
@@ -134,13 +98,35 @@ class App {
                     res.status(501).send({ error: 'Route does not exist' });
                 }
             }
+            // Close DB Connection
+            mongoose_1.default.connection.close();
         }));
         ///////////////////////////////////////////////////////////////////////////////////
         /// PUBLIC GETS ///////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////
         router.get('/:actionA?', (req, res) => __awaiter(this, void 0, void 0, function* () {
-            //res.status(501).send({ error: 'Route does not exist' });
-            res.send('<html><body><h1>Hello World</h1></body></html>');
+            // Connect to DB
+            let connectedToDB = yield this.connectToDB();
+            if (!connectedToDB) {
+                res.status(500).send({ error: 'DB not connected' });
+                return;
+            }
+            // SWITCH BASED ON PARAMS
+            switch (req.params.actionA) {
+                // MANAGING TICKETS
+                // Load Tickets
+                case "getTickets": {
+                    let ticketResponse = yield (0, ticket_1.loadTickets)();
+                    res.json(ticketResponse);
+                    break;
+                }
+                // Default Response if no Route Hits
+                default: {
+                    res.status(501).send({ error: 'Route does not exist' });
+                }
+            }
+            // Close DB Connection
+            mongoose_1.default.connection.close();
         }));
         // Anchor all the Calls
         this.express.use('/', router);
